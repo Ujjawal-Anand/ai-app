@@ -1,0 +1,198 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String          @id @default(uuid())
+  email          String          @unique
+  clerkId        String          @unique
+  name           String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  account        Account?
+  questions      Question[]
+  assessments    Assessment[]
+  questionPapers QuestionPaper[]
+  answerPapers   AnswerPaper[]
+  assistants     Assistant[]
+  chats          Chat[]
+}
+
+model Account {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId])
+}
+
+model Question {
+  id          String        @id @default(uuid())
+  text        String       
+  description String?      
+  type        String
+  topics      String
+  score       Int @default(10)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  options Option[]
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  questionPaper   QuestionPaper? @relation(fields: [questionPaperId], references: [id])
+  questionPaperId String?
+  answers         Answer[]
+
+  @@unique([userId, id])
+}
+
+model Option {
+  id      String  @id @default(uuid())
+  text    String 
+  correct Boolean
+  score   Int
+
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id])
+
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  selectedAnswers OptionSelection[]
+
+  @@unique([questionId, id])
+}
+
+model OptionSelection {
+  optionId String
+  answerId String
+  option   Option @relation(fields: [optionId], references: [id])
+  answer   Answer @relation(fields: [answerId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([optionId, answerId])
+}
+
+model Assessment {
+  id          String  @id @default(uuid())
+  title       String
+  description String? 
+  isEnabled   Boolean @default(true)
+
+  userId    String
+  createdBy User   @relation(fields: [userId], references: [id])
+
+  startTime   DateTime  @default(now())
+  maxDuration Float?
+  endTime     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  questionPaperId String
+  questionPaper   QuestionPaper @relation(fields: [questionPaperId], references: [id])
+
+  answerPapers AnswerPaper[]
+
+  @@unique([userId, id])
+}
+
+model QuestionPaper {
+  id           String          @id @default(uuid())
+  type         String
+  subject      String
+  description  String?         
+  questions    Question[]
+  careerLevel  String
+  answerPapers AnswerPaper[]
+  creatorId    String
+  creator      User            @relation(fields: [creatorId], references: [id])
+  assessment   Assessment[]
+}
+
+model AnswerPaper {
+  id String @id @default(uuid())
+
+  userId  String
+  takenBy User   @relation(fields: [userId], references: [id])
+  isSubmitted Boolean @default(false)
+  submittedAt DateTime?
+
+  questionPaperId String
+  questionPaper   QuestionPaper @relation(fields: [questionPaperId], references: [id])
+  duration        Float?
+  score           Int           @default(0)
+  answers         Answer[]
+
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  assessment   Assessment? @relation(fields: [assessmentId], references: [id])
+  assessmentId String?
+}
+
+model Answer {
+  id   String  @id @default(uuid())
+  text String? 
+
+  questionId      String
+  question        Question          @relation(fields: [questionId], references: [id])
+  selectedOptions OptionSelection[]
+  isCorrect       Boolean @default(false)
+
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  answerPaper   AnswerPaper? @relation(fields: [answerPaperId], references: [id])
+  answerPaperId String
+  feedback      String? 
+  score         Float   @default(0)
+
+  @@unique([questionId, answerPaperId])
+}
+
+model Assistant {
+  id String @id @default(uuid())
+  userId   String 
+  createdBy User @relation(fields: [userId], references: [id])
+  jobRole String
+  careerLevel String
+  technologies String
+  startTime DateTime @default(now())
+  endTime DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  chats Chat[]
+
+  @@unique([userId, id])
+}
+
+model Chat {
+  id String @id @default(uuid())
+  userId    String 
+  createdBy User @relation(fields: [userId], references: [id])
+  role String
+  content String
+  totalTokens Int
+  assistantId String?
+  assistant   Assistant? @relation(fields: [assistantId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([userId, id])
+}
